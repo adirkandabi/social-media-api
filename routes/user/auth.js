@@ -2,7 +2,6 @@ const express = require("express");
 const validator = require("validator");
 const router = express.Router();
 const { hashPassword, generateRandomString } = require("../../utils");
-const { type } = require("os");
 router.post("/login", async (req, res) => {
   try {
     if (!req.body) {
@@ -23,6 +22,7 @@ router.post("/login", async (req, res) => {
       });
     }
     const usersModel = req.app.locals.models.users;
+
     const identifier = email ? email : username;
     const idType = email ? "email" : "username";
     const user = await usersModel.findByUsername(identifier, idType);
