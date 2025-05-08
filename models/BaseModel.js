@@ -1,7 +1,5 @@
 class BaseModel {
   constructor(collectionName) {
-    console.log(`${collectionName} setup`);
-
     this.collectionName = collectionName;
     this.collection = null; // Will be initialized with a MongoDB collection instance
   }

@@ -22,14 +22,9 @@ async function connectToDatabase() {
   });
 
   try {
-    console.log("attempt to connect");
-
     await client.connect(); // Establish the database connection
-    console.log("get the instance");
-
     dbInstance = client.db(); // Store the database instance
     console.log("connected to DB");
-
     return dbInstance;
   } catch (err) {
     throw err;
