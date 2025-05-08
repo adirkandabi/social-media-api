@@ -13,6 +13,7 @@ class User extends BaseModel {
   async findByUsername(identifier, type) {
     return this.collection.findOne({ [type]: identifier });
   }
+  // for register
   async isUserExist(email, phone, username) {
     return this.collection.findOne({
       $or: [{ email: email }, { phone: phone }, { username: username }],
