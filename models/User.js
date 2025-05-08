@@ -5,13 +5,25 @@ class User extends BaseModel {
     super("users");
   }
   async create(userData) {
-    return this.collection.insertOne(userData);
+    return this.collection.insertOne({ userData, is_verified: false });
   }
   async findByCustomId(user_id) {
     return this.collection.findOne({ user_id: user_id });
   }
   async findByUsername(identifier, type) {
     return this.collection.findOne({ [type]: identifier });
+  }
+  async updateName(user_id, name) {
+    return await this.collection.updateOne(
+      { user_id: user_id },
+      { $set: name }
+    );
+  }
+  async updatePassword(user_id, password) {
+    return await this.collection.updateOne(
+      { user_id: user_id },
+      { $set: { password: password } }
+    );
   }
   // for register
   async isUserExist(email, phone, username) {

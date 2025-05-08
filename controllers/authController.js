@@ -1,5 +1,12 @@
 const validator = require("validator");
-const { hashPassword, generateRandomString } = require("../utils");
+const {
+  hashPassword,
+  generateRandomString,
+  sendVerificationEmail,
+  generateRandomCode,
+} = require("../utils");
+const nodemailer = require("nodemailer");
+require("dotenv").config();
 
 exports.login = async (req, res) => {
   try {
@@ -50,12 +57,11 @@ exports.login = async (req, res) => {
 };
 
 exports.register = async (req, res) => {
+  let statusCode = -1;
   try {
     if (!req.body) {
-      return res.status(400).json({
-        success: false,
-        error_msg: "the request should have a body",
-      });
+      statusCode = 400;
+      throw "the request should have a body";
     }
     const {
       email = "",
@@ -78,54 +84,39 @@ exports.register = async (req, res) => {
 
     if (missingFields.length > 0) {
       // IF 'MISSING FIELDS' ARRAY IS NOT EMPTY, RETURN ITS ELEMENTS AS A STRING
-      return res.status(400).json({
-        success: false,
-        error_msg: "missing fields:" + missingFields.join(", "),
-      });
+      statusCode = 400;
+      throw "missing fields:" + missingFields.join(", ");
     }
     if (!validator.isEmail(email)) {
-      return res.status(400).json({
-        success: false,
-        error_msg: "invalid email address",
-      });
+      statusCode = 400;
+      throw "invalid email address";
     }
     if (!validator.isMobilePhone(phone, "he-IL")) {
-      return res.status(400).json({
-        success: false,
-        error_msg: "invalid phone number",
-      });
+      statusCode = 400;
+      throw "invalid phone number";
     }
     // GET THE USERS COLLECTION INSTANCE WE STORED IN 'APP.JS'
     const usersModel = req.app.locals.models.users;
     // CHECK IF THERE IS AN EXIST USER WITH THE SAME EMAIL OR PHONE
     const user = await usersModel.isUserExist(email, phone, username);
     if (user && user.email === email) {
-      return res
-        .status(409)
-        .json({ success: false, error_msg: "This email is already in use" });
+      statusCode = 409;
+      throw "this email is already in use";
     } else if (user && user.phone === phone) {
-      return res.status(409).json({
-        success: false,
-        error_msg: "This phone number is already in use",
-      });
+      statusCode = 409;
+      throw "this phone number is already in use";
     } else if (user && user.username === username) {
-      return res.status(409).json({
-        success: false,
-        error_msg: "This username is already in use",
-      });
+      statusCode = 409;
+      throw "this username is already in use";
     }
     const isOlderThan18 = validateAge(birthday);
     if (isOlderThan18 === null) {
-      return res.status(400).json({
-        success: false,
-        error_msg: "birthday format must be in YYYY-MM-DD",
-      });
+      statusCode = 400;
+      throw "invalid date format";
     }
     if (!isOlderThan18) {
-      return res.status(400).json({
-        success: false,
-        error_msg: "user must be older than 18",
-      });
+      statusCode = 400;
+      throw "you must be older than 18 years old";
     }
     const user_id = generateRandomString();
 
@@ -133,11 +124,23 @@ exports.register = async (req, res) => {
     userData["password"] = hashPassword(userData["password"]);
     const result = await usersModel.create(userData);
     if (result.insertedCount) {
-      return res.status(200).json({ success: true });
+      const verificationModel = req.app.locals.models.verificationCode;
+      const verificationResult = await generateCodeAndSendToEmail(
+        user_id,
+        verificationModel,
+        email
+      );
+      if (verificationResult.success) {
+        return res
+          .status(200)
+          .json({ success: true, message: "verification email has been sent" });
+      } else {
+        statusCode = 500;
+        throw "server error";
+      }
     } else {
-      return res
-        .status(500)
-        .json({ success: false, error_msg: "problem with saving the data" });
+      statusCode = 500;
+      throw "server error";
     }
   } catch (err) {
     console.log(err);
@@ -170,5 +173,47 @@ function validateAge(birthday) {
   } catch (err) {
     console.log(err);
     return null;
+  }
+}
+async function generateCodeAndSendToEmail(userId, verificationModel, email) {
+  let result = {
+    success: false,
+    statusCode: -1,
+    error_msg: "server error",
+  };
+  try {
+    // GENERATE RANDOM CODE FOR EMAIL VERIFICATION
+    const code = generateRandomCode(6);
+    // SAVE THE CODE TO THE DATABASE
+    const documentId = generateRandomString();
+    const expiryDate = new Date(
+      Date.now() + process.env.VERIFICATION_CODE_EXPIRY
+    );
+    const codeResult = await verificationModel.create(
+      userId,
+      documentId,
+      code,
+      expiryDate
+    );
+    if (codeResult.insertedCount === 0) {
+      result.statusCode = 500;
+      result.error = "server error";
+      return result;
+    }
+    // SEND EMAIL TO THE USER
+    const emailSent = await sendVerificationEmail(email, userId, code);
+    if (emailSent) {
+      result.success = true;
+      return result;
+    } else {
+      result.statusCode = 500;
+      result.error = "server error";
+      return result;
+    }
+  } catch (err) {
+    console.log(err);
+    result.statusCode = 500;
+    result.error = "server error";
+    return result;
   }
 }
