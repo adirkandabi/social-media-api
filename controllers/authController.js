@@ -6,15 +6,16 @@ const {
   generateRandomCode,
 } = require("../utils");
 const nodemailer = require("nodemailer");
+const e = require("express");
 require("dotenv").config();
 
 exports.login = async (req, res) => {
+  let statusCode = -1;
+  // let error_msg = "server error";
   try {
     if (!req.body) {
-      return res.status(400).json({
-        success: false,
-        error_msg: "the request should have a body",
-      });
+      statusCode = 400;
+      throw "the request should have a body";
     }
     const { username = "", email = "", password = "" } = req.body;
     const missingFields = [];
@@ -22,10 +23,8 @@ exports.login = async (req, res) => {
     if (!password) missingFields.push("password");
     if (missingFields.length > 0) {
       // IF 'MISSING FIELDS' ARRAY IS NOT EMPTY, RETURN ITS ELEMENTS AS A STRING
-      return res.status(400).json({
-        success: false,
-        error_msg: "missing fields:" + missingFields.join(", "),
-      });
+      statusCode = 400;
+      throw "missing fields:" + missingFields.join(", ");
     }
     const usersModel = req.app.locals.models.users;
 
@@ -33,10 +32,8 @@ exports.login = async (req, res) => {
     const idType = email ? "email" : "username";
     const user = await usersModel.findByUsername(identifier, idType);
     if (!user) {
-      return res.status(401).json({
-        success: false,
-        error_msg: `invalid ${idType} or password`,
-      });
+      statusCode = 401;
+      throw `invalid ${idType} or password`;
     }
     const hashedPassword = hashPassword(password);
     if (user.password === hashedPassword) {
@@ -45,14 +42,14 @@ exports.login = async (req, res) => {
       delete user._id;
       return res.status(200).json({ success: true, user: user });
     } else {
-      return res.status(401).json({
-        success: false,
-        error_msg: `invalid ${idType} or password`,
-      });
+      statusCode = 401;
+      throw "invalid email or password";
     }
   } catch (err) {
     console.log(err);
-    return res.status(500).json({ success: false, error_msg: "server error" });
+    return res
+      .status(statusCode === -1 ? 500 : statusCode)
+      .json({ success: false, error_msg: err });
   }
 };
 
@@ -95,10 +92,12 @@ exports.register = async (req, res) => {
       statusCode = 400;
       throw "invalid phone number";
     }
+
     // GET THE USERS COLLECTION INSTANCE WE STORED IN 'APP.JS'
     const usersModel = req.app.locals.models.users;
     // CHECK IF THERE IS AN EXIST USER WITH THE SAME EMAIL OR PHONE
     const user = await usersModel.isUserExist(email, phone, username);
+
     if (user && user.email === email) {
       statusCode = 409;
       throw "this email is already in use";
@@ -121,19 +120,23 @@ exports.register = async (req, res) => {
     const user_id = generateRandomString();
 
     const userData = { user_id, ...req.body };
+    userData["first_name"] = capitalizeFirstLetter(userData["first_name"]);
+    userData["last_name"] = capitalizeFirstLetter(userData["last_name"]);
     userData["password"] = hashPassword(userData["password"]);
     const result = await usersModel.create(userData);
     if (result.insertedCount) {
-      const verificationModel = req.app.locals.models.verificationCode;
+      const verificationModel = req.app.locals.models.verificationCodes;
       const verificationResult = await generateCodeAndSendToEmail(
         user_id,
         verificationModel,
         email
       );
       if (verificationResult.success) {
-        return res
-          .status(200)
-          .json({ success: true, message: "verification email has been sent" });
+        return res.status(200).json({
+          success: true,
+          message: "verification email has been sent",
+          user: userData,
+        });
       } else {
         statusCode = 500;
         throw "server error";
@@ -144,7 +147,47 @@ exports.register = async (req, res) => {
     }
   } catch (err) {
     console.log(err);
-    return res.status(500).json({ success: false, error_msg: "server error" });
+    return res
+      .status(statusCode === -1 ? 500 : statusCode)
+      .json({ success: false, error_msg: err });
+  }
+};
+exports.verifyEmail = async (req, res) => {
+  let statusCode = -1;
+  try {
+    if (!req.body) {
+      statusCode = 400;
+      throw "the request should have a body";
+    }
+    const { user_id, code } = req.body;
+    if (!user_id) {
+      statusCode = 400;
+      throw "user_id is required";
+    }
+    if (!code) {
+      statusCode = 400;
+      throw "verification code is required";
+    }
+    const verificationModel = req.app.locals.models.verificationCodes;
+    const userModel = req.app.locals.models.users;
+    const isVerified = await verificationModel.verifyCode(user_id, code);
+    console.log(isVerified);
+
+    if (!isVerified) {
+      statusCode = 400;
+      throw "invalid verification code";
+    }
+    const userVerification = await userModel.verifyUser(user_id);
+    if (userVerification.matchedCount === 0) {
+      statusCode = 404;
+      throw "user not found";
+    }
+    return res.status(200).json({ success: true, message: "email verified" });
+  } catch (err) {
+    console.log(err);
+    return res
+      .status(statusCode === -1 ? 500 : statusCode)
+      .json({ success: false, error_msg: err });
   }
 };
 
@@ -186,8 +229,9 @@ async function generateCodeAndSendToEmail(userId, verificationModel, email) {
     const code = generateRandomCode(6);
     // SAVE THE CODE TO THE DATABASE
     const documentId = generateRandomString();
+
     const expiryDate = new Date(
-      Date.now() + process.env.VERIFICATION_CODE_EXPIRY
+      Date.now() + parseInt(process.env.VERIFICATION_CODE_EXPIRY) * 1000
     );
     const codeResult = await verificationModel.create(
       userId,
@@ -195,13 +239,15 @@ async function generateCodeAndSendToEmail(userId, verificationModel, email) {
       code,
       expiryDate
     );
+
     if (codeResult.insertedCount === 0) {
       result.statusCode = 500;
       result.error = "server error";
       return result;
     }
     // SEND EMAIL TO THE USER
-    const emailSent = await sendVerificationEmail(email, userId, code);
+    const emailSent = await sendVerificationEmail(email, code);
+
     if (emailSent) {
       result.success = true;
       return result;
@@ -216,4 +262,9 @@ async function generateCodeAndSendToEmail(userId, verificationModel, email) {
     result.error = "server error";
     return result;
   }
+}
+
+function capitalizeFirstLetter(str) {
+  if (!str) return str;
+  return str.charAt(0).toUpperCase() + str.slice(1);
 }

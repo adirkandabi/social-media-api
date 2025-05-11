@@ -28,41 +28,41 @@ function generateRandomCode(length = 6) {
   }
   return result;
 }
-function sendVerificationEmail(email, user_id, code) {
-  const transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST,
-    port: 465,
-    secure: true, // use SSL
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASSWORD,
-    },
-  });
-  const mailOptions = {
-    to: email,
-    subject: `LinkSpark - Verify your email`,
-    html: `
-      <table role="presentation" width="100%" height="50%" cellspacing="0" cellpadding="0" border="0">
-          <tr>
-              <td align="center" valign="middle" style="height:100vh;">
-                  <div style="text-align:center; padding:60px;margin-top:-20rem;border:1px solid #ddd; border-radius:10px; max-width:400px;">
-                      <p style="font-size:20px;">Your verification code is:</p>
-                      <p style="font-size:25px;font-weight:bold;">${code}</p>
-                      <p>Please enter it in the app.</p>
-                  </div>
-              </td>
-          </tr>
-      </table>
-  `,
-  };
+async function sendVerificationEmail(email, code) {
+  try {
+    const transporter = nodemailer.createTransport({
+      host: process.env.EMAIL_HOST,
+      port: 465,
+      secure: true, // use SSL
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASSWORD,
+      },
+    });
+    const mailOptions = {
+      to: email,
+      subject: `LinkSpark - Verify your email`,
+      html: `
+        <table role="presentation" width="100%" height="50%" cellspacing="0" cellpadding="0" border="0">
+            <tr>
+                <td align="center" valign="middle" style="height:100vh;">
+                    <div style="text-align:center; padding:60px;margin-top:-20rem;border:1px solid #ddd; border-radius:10px; max-width:400px;">
+                        <p style="font-size:20px;">Your verification code is:</p>
+                        <p style="font-size:25px;font-weight:bold;">${code}</p>
+                        <p>Please enter it in the app.</p>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    `,
+    };
 
-  transporter.sendMail(mailOptions, (error, info) => {
-    if (error) {
-      console.log("Error while sending email:", error);
-      return false;
-    }
+    const info = await transporter.sendMail(mailOptions);
     return true;
-  });
+  } catch (err) {
+    console.log(err);
+    return false;
+  }
 }
 
 module.exports = {

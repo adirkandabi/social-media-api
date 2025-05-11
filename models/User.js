@@ -5,7 +5,7 @@ class User extends BaseModel {
     super("users");
   }
   async create(userData) {
-    return this.collection.insertOne({ userData, is_verified: false });
+    return this.collection.insertOne({ ...userData, is_verified: false });
   }
   async findByCustomId(user_id) {
     return this.collection.findOne({ user_id: user_id });
@@ -23,6 +23,12 @@ class User extends BaseModel {
     return await this.collection.updateOne(
       { user_id: user_id },
       { $set: { password: password } }
+    );
+  }
+  async verifyUser(userId) {
+    return await this.collection.updateOne(
+      { user_id: userId },
+      { $set: { is_verified: true } }
     );
   }
   // for register
