@@ -23,29 +23,23 @@ class VerificationCodes extends BaseModel {
   }
   async verifyCode(userId, code) {
     const addingTime = parseInt(process.env.VERIFICATION_CODE_EXPIRY);
-    const codeDocuments = await this.collection.find({
+    const codeDocument = await this.collection.findOne({
       user_id: userId,
       code: code,
       verified: false,
     });
-    codeDocuments.forEach(async (document) => {
-      const shouldExpire = new Date(
-        new Date(document.expire_at).getTime() + addingTime * 1000
+    if (!codeDocument) return false;
+    const shouldExpire = new Date(
+      new Date(codeDocument.expire_at).getTime() + addingTime * 1000
+    );
+    const now = new Date();
+    if (now < shouldExpire) {
+      const updateResult = await this.collection.updateOne(
+        { user_id: userId, code: code },
+        { $set: { verified: true } }
       );
-      const now = new Date();
-
-      if (now < shouldExpire) {
-        const updateResult = await this.collection.updateOne(
-          { user_id: userId, code: code },
-          { $set: { verified: true } }
-        );
-        console.log("returning true");
-
-        return updateResult.matchedCount > 0;
-      }
-    });
-    console.log("returning false");
-
+      return updateResult.matchedCount > 0;
+    }
     return false;
   }
 }

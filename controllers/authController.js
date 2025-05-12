@@ -171,8 +171,6 @@ exports.verifyEmail = async (req, res) => {
     const verificationModel = req.app.locals.models.verificationCodes;
     const userModel = req.app.locals.models.users;
     const isVerified = await verificationModel.verifyCode(user_id, code);
-    console.log(isVerified);
-
     if (!isVerified) {
       statusCode = 400;
       throw "invalid verification code";
