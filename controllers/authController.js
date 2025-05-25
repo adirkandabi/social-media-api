@@ -156,7 +156,7 @@ exports.sendVerificationCode = async (req, res) => {
     const verificationModel = req.app.locals.models.verificationCodes;
 
     // CHECK IF THE USER EXISTS
-    const user = await usersModel.findById(user_id);
+    const user = await usersModel.findByCustomId(user_id);
     if (!user) {
       statusCode = 404;
       throw "user not found";
@@ -181,7 +181,7 @@ exports.sendVerificationCode = async (req, res) => {
     console.log(err);
     return res
       .status(statusCode === -1 ? 500 : statusCode)
-      .json({ success: false, error_msg: err });
+      .json({ success: false, error_msg: err ? err : "server error" });
   }
 };
 exports.verifyEmail = async (req, res) => {
