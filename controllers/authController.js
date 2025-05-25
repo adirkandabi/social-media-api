@@ -125,25 +125,57 @@ exports.register = async (req, res) => {
     userData["password"] = hashPassword(userData["password"]);
     const result = await usersModel.create(userData);
     if (result.insertedCount) {
-      const verificationModel = req.app.locals.models.verificationCodes;
-      const verificationResult = await generateCodeAndSendToEmail(
-        user_id,
-        verificationModel,
-        email
-      );
-      if (verificationResult.success) {
-        return res.status(200).json({
-          success: true,
-          message: "verification email has been sent",
-          user: userData,
-        });
-      } else {
-        statusCode = 500;
-        throw "server error";
-      }
+      return res.status(200).json({
+        success: true,
+        user: userData,
+      });
     } else {
       statusCode = 500;
       throw "server error";
+    }
+  } catch (err) {
+    console.log(err);
+    return res
+      .status(statusCode === -1 ? 500 : statusCode)
+      .json({ success: false, error_msg: err });
+  }
+};
+exports.sendVerificationCode = async (req, res) => {
+  let statusCode = -1;
+  try {
+    if (!req.body) {
+      statusCode = 400;
+      throw "the request should have a body";
+    }
+    const { user_id } = req.body;
+    if (!user_id) {
+      statusCode = 400;
+      throw "user_id is required";
+    }
+    const usersModel = req.app.locals.models.users;
+    const verificationModel = req.app.locals.models.verificationCodes;
+
+    // CHECK IF THE USER EXISTS
+    const user = await usersModel.findById(user_id);
+    if (!user) {
+      statusCode = 404;
+      throw "user not found";
+    }
+    // GENERATE CODE AND SEND IT TO THE USER EMAIL
+    const result = await generateCodeAndSendToEmail(
+      user_id,
+      verificationModel,
+      user.email
+    );
+    if (result.success) {
+      return res.status(200).json({
+        success: true,
+        message: "verification code sent to your email",
+      });
+    } else {
+      return res
+        .status(result.statusCode === -1 ? 500 : result.statusCode)
+        .json({ success: false, error_msg: result.error });
     }
   } catch (err) {
     console.log(err);
