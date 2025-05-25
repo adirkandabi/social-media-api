@@ -93,6 +93,27 @@ exports.updateProfile = async (req, res) => {
     });
   }
 };
+exports.getProfile = async (req, res) => {
+  let statusCode = -1;
+  try {
+    const userId = req.params.user_id;
+    if (!userId) {
+      statusCode = 400;
+      throw "user_id query param is missing";
+    }
+    const profileModel = req.app.locals.models.usersProfile;
+    const profile = await profileModel.findByUserId(userId);
+    console.log(profile);
+    if (!profile) {
+      statusCode = 404;
+      throw "user profile is not exist";
+    }
+    return res.status(200).json({ success: true, profile: profile });
+  } catch (error) {
+    statusCode = statusCode === -1 ? 500 : statusCode;
+    return res.status(statusCode).json({ success: false, error_msg: error });
+  }
+};
 
 async function validateRequest(body, userId, usersModel) {
   const result = {

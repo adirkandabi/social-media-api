@@ -6,5 +6,5 @@ router.post("/", profileController.fillProfile);
 
 // UPDATE PROFILE
 router.patch("/", profileController.updateProfile);
-
+router.get("/:user_id", profileController.getProfile);
 module.exports = router;

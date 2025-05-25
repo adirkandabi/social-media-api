@@ -3,6 +3,8 @@ const connectToDatabase = require("./models/db.js");
 const Models = require("./models/Models.js");
 const express = require("express");
 const routes = require("./routes/index.js");
+const core = require("mongodb/lib/core/index.js");
+const cors = require("cors");
 const app = express();
 const models = new Models();
 
@@ -14,7 +16,7 @@ async function startServer() {
     app.locals.models = models;
     // Middleware to parse incoming requests with JSON payloads
     app.use(express.json());
-
+    app.use(cors());
     // Use routes for API endpoint
     app.use("/", routes);
 
