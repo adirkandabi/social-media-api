@@ -6,15 +6,11 @@ const allowedFields = [
   "job_title",
   "company",
   "location",
-  "hobbies",
-  "skills",
-  "website",
-  "social_links",
+
   "gender",
   "relationship_status",
-  "languages",
+
   "education",
-  "phone",
 ];
 exports.fillProfile = async (req, res) => {
   var statusCode = -1;
