@@ -67,7 +67,7 @@ exports.getAllPosts = async (req, res) => {
 
     // Case: include posts of author and their friends
     if (req.query.author_id && req.query.get_friends_posts === "true") {
-      const user = await users.findOne({ user_id: req.query.author_id });
+      const user = await users.findByCustomId(req.query.author_id);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
