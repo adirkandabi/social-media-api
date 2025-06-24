@@ -8,14 +8,15 @@ const Likes = require("./Likes");
 const VerificationCodes = require("./VerificationCodes");
 
 
+
 class Models {
   constructor() {
     // Initialize model instances
     this.users = new User();
     this.posts = new Posts();
     this.usersProfile = new UserProfile();
-    this.groups = new Groups();      
-    this.comments = new Comments();  
+    this.groups = new Groups();
+    this.comments = new Comments();
     this.likes = new Likes();
     this.verificationCodes = new VerificationCodes();
 

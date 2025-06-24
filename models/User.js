@@ -5,7 +5,11 @@ class User extends BaseModel {
     super("users");
   }
   async create(userData) {
-    return this.collection.insertOne({ ...userData, is_verified: false });
+    return this.collection.insertOne({
+      ...userData,
+      is_verified: false,
+      friends: [],
+    });
   }
   async findByCustomId(user_id) {
     return this.collection.findOne({ user_id: user_id });
@@ -37,6 +41,27 @@ class User extends BaseModel {
       $or: [{ email: email }, { phone: phone }, { username: username }],
     });
   }
+
+  async addFriend(userId, friendId) {
+    return this.collection.updateOne(
+      { user_id: userId },
+      { $addToSet: { friends: friendId } }
+    );
+  }
+
+  async removeFriend(userId, friendId) {
+    return this.collection.updateOne(
+      { user_id: userId },
+      { $pull: { friends: friendId } }
+    );
+  }
+
+  async getFriends(userId) {
+    const user = await this.findByCustomId(userId);
+    if (!user) return null;
+    return user.friends || [];
+  }
+
 }
 
 module.exports = User;

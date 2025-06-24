@@ -135,4 +135,19 @@ exports.getPostsByGroup = async (req, res) => {
         });
     }
 };
+exports.getPostsByUserId = async (req, res) => {
+    const posts = req.app.locals.models.posts;
+    const users = req.app.locals.models.users;
+
+    const user_id = req.params.user_id;
+
+    const user = await users.findByCustomId(user_id);
+    if (!user) {
+        return res.status(404).json({ message: "User not found" });
+    }
+
+    const userPosts = await posts.getPostsByUserId(user_id);
+    res.json(userPosts);
+};
+
 
