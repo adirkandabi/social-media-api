@@ -11,7 +11,7 @@ router.get("/filter/by-group", postsController.getPostsByGroup);
 router.get("/:post_id", postsController.getPostById);
 router.put("/:post_id", postsController.updatePost);
 router.delete("/:post_id", postsController.deletePost);
-router.get("/user/:user_id", postsController.getPostsByUserId);
+// router.get("/user/:user_id", postsController.getPostsByUserId);
 
 
 module.exports = router;
