@@ -160,3 +160,4 @@ exports.getPostsByGroup = async (req, res) => {
     });
   }
 };
+

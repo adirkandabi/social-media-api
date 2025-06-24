@@ -88,6 +88,12 @@ class Posts extends BaseModel {
 
     return this.collection.find(query).toArray();
   }
+
+  async getPostsByUserId(author_id) {
+    return this.collection.find({ author_id }).toArray();
+  }
+
 }
+
 
 module.exports = Posts;

@@ -41,6 +41,27 @@ class User extends BaseModel {
       $or: [{ email: email }, { phone: phone }, { username: username }],
     });
   }
+
+  async addFriend(userId, friendId) {
+    return this.collection.updateOne(
+      { user_id: userId },
+      { $addToSet: { friends: friendId } }
+    );
+  }
+
+  async removeFriend(userId, friendId) {
+    return this.collection.updateOne(
+      { user_id: userId },
+      { $pull: { friends: friendId } }
+    );
+  }
+
+  async getFriends(userId) {
+    const user = await this.findByCustomId(userId);
+    if (!user) return null;
+    return user.friends || [];
+  }
+
 }
 
 module.exports = User;
