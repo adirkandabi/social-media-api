@@ -13,7 +13,7 @@ exports.createGroup = async (req, res) => {
         name,
         description: description || "",
         owner_id: owner_id || null,
-        members: [],
+        members: owner_id ? [owner_id] : [],
         created_at: new Date(),
         updated_at: null,
     };
@@ -21,6 +21,7 @@ exports.createGroup = async (req, res) => {
     await groups.create(group);
     res.status(201).json({ message: "Group created", group });
 };
+
 
 // Get all groups (with optional filter by owner_id)
 exports.getAllGroups = async (req, res) => {
