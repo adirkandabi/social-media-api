@@ -5,7 +5,11 @@ class User extends BaseModel {
     super("users");
   }
   async create(userData) {
-    return this.collection.insertOne({ ...userData, is_verified: false });
+    return this.collection.insertOne({
+      ...userData,
+      is_verified: false,
+      friends: [],
+    });
   }
   async findByCustomId(user_id) {
     return this.collection.findOne({ user_id: user_id });
