@@ -21,3 +21,24 @@ exports.getUser = async (req, res) => {
       .json({ success: false, error_msg: err ? err : "server error" });
   }
 };
+exports.searchUsers = async (req, res) => {
+  try {
+    const query = req.query.q;
+    if (!query) {
+      return res
+        .status(400)
+        .json({ success: false, error_msg: "Search query is required" });
+    }
+
+    const userModel = req.app.locals.models.users;
+
+    const regex = new RegExp(query, "i"); // Case-insensitive regex
+
+    const users = await userModel.findBySearch(regex);
+
+    return res.status(200).json({ success: true, users });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ success: false, error_msg: "Server error" });
+  }
+};
