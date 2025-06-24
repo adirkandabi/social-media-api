@@ -50,20 +50,40 @@ exports.getPostById = async (req, res) => {
 // קבלת כל הפוסטים
 exports.getAllPosts = async (req, res) => {
   const posts = req.app.locals.models.posts;
+  const users = req.app.locals.models.users;
 
   try {
     const filter = {};
+
+    // Case: group_id filter
     if (req.query.group_id) {
       filter.group_id = req.query.group_id;
     }
-    if (req.query.author_id) {
+
+    // Case: only author's posts (no friends logic)
+    if (req.query.author_id && req.query.get_friends_posts !== "true") {
       filter.author_id = req.query.author_id;
     }
-    console.log(filter);
+
+    // Case: include posts of author and their friends
+    if (req.query.author_id && req.query.get_friends_posts === "true") {
+      const user = await users.findOne({ user_id: req.query.author_id });
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Combine author_id and friends
+      filter.author_id = {
+        $in: [req.query.author_id, ...(user.friends || [])],
+      };
+    }
+
+    console.log("Filter:", filter);
 
     const allPosts = await posts.list(filter);
     res.json(allPosts);
   } catch (error) {
+    console.error("getAllPosts error:", error);
     res.status(500).json({ message: "Failed to fetch posts", error });
   }
 };
