@@ -97,20 +97,60 @@ exports.getProfile = async (req, res) => {
       statusCode = 400;
       throw "user_id query param is missing";
     }
+
     const profileModel = req.app.locals.models.usersProfile;
     const usersModel = req.app.locals.models.users;
+
     const user = await usersModel.findByCustomId(userId);
     if (!user) {
       statusCode = 404;
       throw "user not found";
     }
+
     const profile = await profileModel.findByUserId(userId);
-    console.log(profile);
     if (!profile) {
       statusCode = 404;
       throw "user profile is not exist";
     }
-    const result = Object.assign(user, profile);
+
+    const result = Object.assign({}, user, profile);
+
+    // Add summarized friends
+    const friendsIds = user.friends || [];
+    const friendSummaries = await Promise.all(
+      friendsIds.map((id) =>
+        usersModel
+          .findUserSummary(id)
+          .then((r) => r[0])
+          .catch(() => null)
+      )
+    );
+    result.friends = friendSummaries.filter(Boolean); // remove nulls
+
+    //  Add summarized received requests
+    const requestRecievedIds = user.requests_recieved || [];
+    const requestRecievedSummaries = await Promise.all(
+      requestRecievedIds.map((id) =>
+        usersModel
+          .findUserSummary(id)
+          .then((r) => r[0])
+          .catch(() => null)
+      )
+    );
+    result.requests_recieved = requestRecievedSummaries.filter(Boolean);
+
+    //  Add summarized sent requests
+    const requestSentIds = user.requests_sent || [];
+    const requestSentSummaries = await Promise.all(
+      requestSentIds.map((id) =>
+        usersModel
+          .findUserSummary(id)
+          .then((r) => r[0])
+          .catch(() => null)
+      )
+    );
+    result.requests_sent = requestSentSummaries.filter(Boolean);
+
     return res.status(200).json({ success: true, user: result });
   } catch (error) {
     statusCode = statusCode === -1 ? 500 : statusCode;
