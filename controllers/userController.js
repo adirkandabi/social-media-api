@@ -276,3 +276,25 @@ exports.getRequests = async (req, res) => {
       .json({ success: false, error_msg: err });
   }
 };
+exports.getAllFriends = async (req, res) => {
+  try {
+    let statusCode = -1;
+    const user_id = req.params.user_id;
+    if (!user_id) {
+      statusCode = 400;
+      throw "user_id is required";
+    }
+    const userModel = req.app.locals.models.users;
+    const friends = await userModel.getFriends(user_id);
+    if (friends === null) {
+      statusCode = 404;
+      throw "User not found";
+    }
+    return res.status(200).json({ friends: friends });
+  } catch (err) {
+    console.error(err);
+    return res
+      .status(statusCode === -1 ? 500 : statusCode)
+      .json({ success: false, error_msg: err });
+  }
+};

@@ -42,7 +42,7 @@ class User extends BaseModel {
         { user_id: userId },
         {
           $addToSet: { friends: friendId },
-          $pull: { requests_sent: friendId },
+          $pull: { requests_recieved: friendId },
         }
       );
 
@@ -50,7 +50,7 @@ class User extends BaseModel {
         { user_id: friendId },
         {
           $addToSet: { friends: userId },
-          $pull: { requests_recieved: userId },
+          $pull: { requests_sent: userId },
         }
       );
 
@@ -229,10 +229,46 @@ class User extends BaseModel {
 
   async getFriends(userId) {
     const user = await this.findByCustomId(userId);
-    if (!user) return null;
-    return user.friends || [];
-  }
+    if (!user) return [];
 
+    const friendIds = user.friends || [];
+
+    if (friendIds.length === 0) return [];
+
+    return this.collection
+      .aggregate([
+        {
+          $match: {
+            user_id: { $in: friendIds },
+          },
+        },
+        {
+          $lookup: {
+            from: "users_profile",
+            localField: "user_id",
+            foreignField: "user_id",
+            as: "profileData",
+          },
+        },
+        {
+          $unwind: {
+            path: "$profileData",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            user_id: 1,
+            username: 1,
+            first_name: 1,
+            last_name: 1,
+            profile_image: "$profileData.profile_image",
+          },
+        },
+      ])
+      .toArray();
+  }
 }
 
 module.exports = User;

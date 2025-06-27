@@ -6,8 +6,7 @@ const Groups = require("./Groups");
 const Comments = require("./Comments");
 const Likes = require("./Likes");
 const VerificationCodes = require("./VerificationCodes");
-
-
+const Message = require("./Message");
 
 class Models {
   constructor() {
@@ -19,7 +18,7 @@ class Models {
     this.comments = new Comments();
     this.likes = new Likes();
     this.verificationCodes = new VerificationCodes();
-
+    this.message = new Message();
   }
 
   async init(db) {
@@ -30,7 +29,7 @@ class Models {
     await this.comments.init(db);
     await this.likes.init(db);
     await this.verificationCodes.init(db);
-
+    await this.message.init(db);
   }
 }
 
