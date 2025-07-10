@@ -47,7 +47,6 @@ exports.getPostById = async (req, res) => {
   }
 };
 
-// קבלת כל הפוסטים עם מחברים מתוך המודל
 exports.getAllPosts = async (req, res) => {
   const posts = req.app.locals.models.posts;
   const users = req.app.locals.models.users;
