@@ -10,4 +10,6 @@ router.post("/accept-friend-request", userController.acceptFriendRequest);
 router.post("/reject-friend-request", userController.rejectFriendRequest);
 router.post("/cancel-friend-request", userController.cancelFriendRequest);
 router.post("/delete-friend", userController.deleteFriend);
+router.post("/batch", userController.getUsersByIds);
+
 module.exports = router;
