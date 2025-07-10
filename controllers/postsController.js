@@ -20,7 +20,7 @@ exports.createPost = async (req, res) => {
     await posts.create(post);
     res.status(201).json({
       message: "Post created successfully",
-      post, // מחזיר את כל הפוסט שנשלח, כולל post_id
+      post,
     });
   } catch (error) {
     console.error("❌ Error creating post:", JSON.stringify(error, null, 2));
@@ -47,7 +47,7 @@ exports.getPostById = async (req, res) => {
   }
 };
 
-// קבלת כל הפוסטים
+// קבלת כל הפוסטים עם מחברים מתוך המודל
 exports.getAllPosts = async (req, res) => {
   const posts = req.app.locals.models.posts;
   const users = req.app.locals.models.users;
@@ -55,30 +55,24 @@ exports.getAllPosts = async (req, res) => {
   try {
     const filter = {};
 
-    // Case: group_id filter
     if (req.query.group_id) {
       filter.group_id = req.query.group_id;
     }
 
-    // Case: only author's posts (no friends logic)
     if (req.query.author_id && req.query.get_friends_posts !== "true") {
       filter.author_id = req.query.author_id;
     }
 
-    // Case: include posts of author and their friends
     if (req.query.author_id && req.query.get_friends_posts === "true") {
       const user = await users.findByCustomId(req.query.author_id);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Combine author_id and friends
       filter.author_id = {
         $in: [req.query.author_id, ...(user.friends || [])],
       };
     }
-
-    console.log("Filter:", filter);
 
     const allPosts = await posts.list(filter);
     res.json(allPosts);
@@ -139,6 +133,7 @@ exports.searchPosts = async (req, res) => {
     res.status(500).json({ error: "Search failed", details: err.message });
   }
 };
+
 // סינון פוסטים לפי מזהה קבוצה
 exports.getPostsByGroup = async (req, res) => {
   const posts = req.app.locals.models.posts;
@@ -160,4 +155,3 @@ exports.getPostsByGroup = async (req, res) => {
     });
   }
 };
-

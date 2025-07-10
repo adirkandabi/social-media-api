@@ -108,10 +108,22 @@ exports.getGroupsByUser = async (req, res) => {
 
   try {
     const userGroups = await groups.list({ members: user_id });
-    res.json(userGroups);
+
+    const groupsWithId = userGroups.map((g) => ({
+      group_id: g.group_id,
+      name: g.name,
+      description: g.description,
+      owner_id: g.owner_id,
+      created_at: g.created_at,
+      updated_at: g.updated_at,
+      members: g.members,
+    }));
+
+    res.json(groupsWithId);
   } catch (error) {
     res
       .status(500)
       .json({ message: "Failed to fetch user's groups", error: error.message });
   }
 };
+

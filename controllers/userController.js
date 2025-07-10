@@ -13,7 +13,7 @@ exports.getUser = async (req, res) => {
       throw "user not found";
     }
     delete user.password; // Remove password from the response
-    return res.status(200).json({ success: true, user });
+    return res.status(200).json(user);
   } catch (err) {
     console.log(err);
     return res
@@ -298,3 +298,18 @@ exports.getAllFriends = async (req, res) => {
       .json({ success: false, error_msg: err });
   }
 };
+exports.getUsersByIds = async (req, res) => {
+  try {
+    const userIds = req.body.user_ids; // שליחה בגוף
+    if (!Array.isArray(userIds) || userIds.length === 0) {
+      return res.status(400).json({ message: "user_ids must be a non-empty array" });
+    }
+
+    const users = await req.app.locals.models.users.getUsersByIds(userIds);
+    return res.status(200).json(users);
+  } catch (error) {
+    console.error("❌ Error in getUsersByIds:", error);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
