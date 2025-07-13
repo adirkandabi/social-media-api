@@ -97,7 +97,8 @@ exports.leaveGroup = async (req, res) => {
   await groups.removeMember(req.params.group_id, req.body.user_id);
   res.json({ message: "Left group" });
 };
-//get groups by user
+
+// Get groups by user (either member OR owner)
 exports.getGroupsByUser = async (req, res) => {
   const groups = req.app.locals.models.groups;
   const users = req.app.locals.models.users;
@@ -107,7 +108,12 @@ exports.getGroupsByUser = async (req, res) => {
   if (!user) return res.status(404).json({ message: "User not found" });
 
   try {
-    const userGroups = await groups.list({ members: user_id });
+    const userGroups = await groups.list({
+      $or: [
+        { members: user_id },
+        { owner_id: user_id },
+      ],
+    });
 
     const groupsWithId = userGroups.map((g) => ({
       group_id: g.group_id,
@@ -121,9 +127,9 @@ exports.getGroupsByUser = async (req, res) => {
 
     res.json(groupsWithId);
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Failed to fetch user's groups", error: error.message });
+    res.status(500).json({
+      message: "Failed to fetch user's groups",
+      error: error.message,
+    });
   }
 };
-
