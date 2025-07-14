@@ -1,316 +1,184 @@
+const sendError = (res, code, msg) =>
+  res.status(code).json({ success: false, message: msg });
+
+/* --------------------------------------------------------------------------
+ *  GET  /users/:user_id
+ * ------------------------------------------------------------------------ */
+exports.getUserById = async (req, res) => {
+  try {
+    const { user_id } = req.params;
+    if (!user_id) return sendError(res, 400, "user_id is required");
+
+    const userM = req.app.locals.models.users;
+    const user = await userM.findByCustomId(user_id);
+    if (!user) return sendError(res, 404, "User not found");
+
+    user.name = user.username;
+    delete user.password;
+    return res.json(user);
+  } catch (err) {
+    console.error("getUserById error:", err);
+    return sendError(res, 500, "Server error");
+  }
+};
+
+/* --------------------------------------------------------------------------
+ *  GET  /users?id=xxxx
+ * ------------------------------------------------------------------------ */
 exports.getUser = async (req, res) => {
-  let statusCode = -1;
   try {
     const user_id = req.query.id;
-    if (!user_id) {
-      statusCode = 400;
-      throw "user_id is required";
-    }
-    const userModel = req.app.locals.models.users;
-    const user = await userModel.findByCustomId(user_id);
-    if (!user) {
-      statusCode = 404;
-      throw "user not found";
-    }
-    delete user.password; // Remove password from the response
-    return res.status(200).json(user);
+    if (!user_id) return sendError(res, 400, "user_id is required");
+
+    const userM = req.app.locals.models.users;
+    const user = await userM.findByCustomId(user_id);
+    if (!user) return sendError(res, 404, "User not found");
+
+    user.name = user.username; // לבדוק מה אני מעדיף first_name + last_name
+
+    delete user.password;
+    return res.json(user);
   } catch (err) {
-    console.log(err);
-    return res
-      .status(statusCode === -1 ? 500 : statusCode)
-      .json({ success: false, error_msg: err ? err : "server error" });
+    console.error("getUser error:", err);
+    return sendError(res, 500, "Server error");
   }
 };
+
+/* --------------------------------------------------------------------------
+ *  GET  /users/list?q=term
+ * ------------------------------------------------------------------------ */
 exports.searchUsers = async (req, res) => {
   try {
-    const query = req.query.q;
-    if (!query) {
-      return res
-        .status(400)
-        .json({ success: false, error_msg: "Search query is required" });
+    const q = req.query.q;
+    if (!q) return sendError(res, 400, "Search query is required");
+
+    const regex = new RegExp(q, "i");
+    const userM = req.app.locals.models.users;
+    const users = await userM.findBySearch(regex);
+
+    return res.json({ success: true, users });
+  } catch (err) {
+    console.error("searchUsers error:", err);
+    return sendError(res, 500, "Server error");
+  }
+};
+
+/* ==========================================================================
+ *  SECTION: Friend-Request / Friends
+ * ======================================================================== */
+
+exports.sendFriendRequest = async (req, res) =>
+  friendRequestWrapper(req, res, "send");
+exports.acceptFriendRequest = async (req, res) =>
+  friendRequestWrapper(req, res, "accept");
+exports.rejectFriendRequest = async (req, res) =>
+  friendRequestWrapper(req, res, "reject");
+exports.cancelFriendRequest = async (req, res) =>
+  friendRequestWrapper(req, res, "cancel");
+exports.deleteFriend = async (req, res) =>
+  friendRequestWrapper(req, res, "delete");
+
+async function friendRequestWrapper(req, res, action) {
+  const { user_id, friend_id } = req.body;
+  if (!user_id || !friend_id)
+    return sendError(res, 400, "Both user_id and friend_id are required");
+  if (user_id === friend_id)
+    return sendError(res, 400, "Cannot perform this action on yourself");
+
+  try {
+    const usersM = req.app.locals.models.users;
+    const user = await usersM.findByCustomId(user_id);
+    const friend = await usersM.findByCustomId(friend_id);
+    if (!user || !friend) return sendError(res, 404, "User not found");
+
+    let ok = false,
+      message = "";
+    switch (action) {
+      case "send":
+        ok = await usersM.sendFriendRequest(user_id, friend_id);
+        message = "Friend request sent";
+        break;
+      case "accept":
+        ok = await usersM.acceptFriendRequest(user_id, friend_id);
+        message = "Friend request accepted";
+        break;
+      case "reject":
+        ok = await usersM.rejectFriendRequest(user_id, friend_id);
+        message = "Friend request rejected";
+        break;
+      case "cancel":
+        ok = await usersM.cancelFriendRequest(user_id, friend_id);
+        message = "Friend request cancelled";
+        break;
+      case "delete":
+        ok = await usersM.deleteFriend(user_id, friend_id);
+        message = "Friend deleted successfully";
+        break;
     }
 
-    const userModel = req.app.locals.models.users;
+    if (!ok) return sendError(res, 500, "Operation failed");
+    return res.json({ success: true, message });
+  } catch (err) {
+    console.error(`${action}FriendRequest error:`, err);
+    return sendError(res, 500, "Server error");
+  }
+}
 
-    const regex = new RegExp(query, "i"); // Case-insensitive regex
-
-    const users = await userModel.findBySearch(regex);
-
-    return res.status(200).json({ success: true, users });
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ success: false, error_msg: "Server error" });
-  }
-};
-exports.sendFriendRequest = async (req, res) => {
-  let statusCode = -1;
-  try {
-    const { user_id, friend_id } = req.body;
-    if (!user_id || !friend_id) {
-      statusCode = 400;
-      throw "Both user_id and friend_id are required";
-    }
-    if (user_id === friend_id) {
-      statusCode = 400;
-      throw "You cannot send a friend request to yourself";
-    }
-    // Check if the user exists
-    const userModel = req.app.locals.models.users;
-    const user = await userModel.findByCustomId(user_id);
-    if (!user) {
-      statusCode = 404;
-      throw `User ${user_id} not found`;
-    }
-    // Check if the friend exists
-    const friend = await userModel.findByCustomId(friend_id);
-    if (!friend) {
-      statusCode = 404;
-      throw `User ${friend_id} not found`;
-    }
-    const success = await userModel.sendFriendRequest(user_id, friend_id);
-    if (!success) {
-      statusCode = 500;
-      throw "Failed to send friend request";
-    }
-    return res
-      .status(200)
-      .json({ success: true, message: "Friend request sent" });
-  } catch (err) {
-    console.error(err);
-    return res
-      .status(statusCode === -1 ? 500 : statusCode)
-      .json({ success: false, error_msg: err });
-  }
-};
-exports.acceptFriendRequest = async (req, res) => {
-  let statusCode = -1;
-  try {
-    const { user_id, friend_id } = req.body;
-    if (!user_id || !friend_id) {
-      statusCode = 400;
-      throw "Both user_id and friend_id are required";
-    }
-    if (user_id === friend_id) {
-      statusCode = 400;
-      throw "You cannot accept a friend request from yourself";
-    }
-    // Check if the user exists
-    const userModel = req.app.locals.models.users;
-    const user = await userModel.findByCustomId(user_id);
-    if (!user) {
-      statusCode = 404;
-      throw `User ${user_id} not found`;
-    }
-    // Check if the friend exists
-    const friend = await userModel.findByCustomId(friend_id);
-    if (!friend) {
-      statusCode = 404;
-      throw `User ${friend_id} not found`;
-    }
-    const success = await userModel.acceptFriendRequest(user_id, friend_id);
-    if (!success) {
-      statusCode = 500;
-      throw "Failed to accept friend request";
-    }
-    return res
-      .status(200)
-      .json({ success: true, message: "Friend request accepted" });
-  } catch (err) {
-    console.error(err);
-    return res
-      .status(statusCode === -1 ? 500 : statusCode)
-      .json({ success: false, error_msg: err });
-  }
-};
-exports.rejectFriendRequest = async (req, res) => {
-  let statusCode = -1;
-  try {
-    const { user_id, friend_id } = req.body;
-    if (!user_id || !friend_id) {
-      statusCode = 400;
-      throw "Both user_id and friend_id are required";
-    }
-    if (user_id === friend_id) {
-      statusCode = 400;
-      throw "You cannot reject a friend request from yourself";
-    }
-    // Check if the user exists
-    const userModel = req.app.locals.models.users;
-    const user = await userModel.findByCustomId(user_id);
-    if (!user) {
-      statusCode = 404;
-      throw `User ${user_id} not found`;
-    }
-    // Check if the friend exists
-    const friend = await userModel.findByCustomId(friend_id);
-    if (!friend) {
-      statusCode = 404;
-      throw `User ${friend_id} not found`;
-    }
-    const success = await userModel.rejectFriendRequest(user_id, friend_id);
-    if (!success) {
-      statusCode = 500;
-      throw "Failed to reject friend request";
-    }
-    return res
-      .status(200)
-      .json({ success: true, message: "Friend request rejected" });
-  } catch (err) {
-    console.error(err);
-    return res
-      .status(statusCode === -1 ? 500 : statusCode)
-      .json({ success: false, error_msg: err });
-  }
-};
-exports.cancelFriendRequest = async (req, res) => {
-  let statusCode = -1;
-  try {
-    const { user_id, friend_id } = req.body;
-    if (!user_id || !friend_id) {
-      statusCode = 400;
-      throw "Both user_id and friend_id are required";
-    }
-    if (user_id === friend_id) {
-      statusCode = 400;
-      throw "You cannot cancel a friend request to yourself";
-    }
-    // Check if the user exists
-    const userModel = req.app.locals.models.users;
-    const user = await userModel.findByCustomId(user_id);
-    if (!user) {
-      statusCode = 404;
-      throw `User ${user_id} not found`;
-    }
-    // Check if the friend exists
-    const friend = await userModel.findByCustomId(friend_id);
-    if (!friend) {
-      statusCode = 404;
-      throw `User ${friend_id} not found`;
-    }
-    const success = await userModel.cancelFriendRequest(user_id, friend_id);
-    if (!success) {
-      statusCode = 500;
-      throw "Failed to cancel friend request";
-    }
-    return res
-      .status(200)
-      .json({ success: true, message: "Friend request cancelled" });
-  } catch (err) {
-    console.error(err);
-    return res
-      .status(statusCode === -1 ? 500 : statusCode)
-      .json({ success: false, error_msg: err });
-  }
-};
-exports.deleteFriend = async (req, res) => {
-  let statusCode = -1;
-  try {
-    const { user_id, friend_id } = req.body;
-    if (!user_id || !friend_id) {
-      statusCode = 400;
-      throw "Both user_id and friend_id are required";
-    }
-    if (user_id === friend_id) {
-      statusCode = 400;
-      throw "You cannot delete yourself as a friend";
-    }
-    // Check if the user exists
-    const userModel = req.app.locals.models.users;
-    const user = await userModel.findByCustomId(user_id);
-    if (!user) {
-      statusCode = 404;
-      throw `User ${user_id} not found`;
-    }
-    // Check if the friend exists
-    const friend = await userModel.findByCustomId(friend_id);
-    if (!friend) {
-      statusCode = 404;
-      throw `User ${friend_id} not found`;
-    }
-    const success = await userModel.deleteFriend(user_id, friend_id);
-    if (!success) {
-      statusCode = 500;
-      throw "Failed to delete friend";
-    }
-    return res
-      .status(200)
-      .json({ success: true, message: "Friend deleted successfully" });
-  } catch (err) {
-    console.error(err);
-    return res
-      .status(statusCode === -1 ? 500 : statusCode)
-      .json({ success: false, error_msg: err });
-  }
-};
+/* --------------------------------------------------------------------------
+ *  GET  /users/:user_id/requests
+ * ------------------------------------------------------------------------ */
 exports.getRequests = async (req, res) => {
-  let statusCode = -1;
   try {
-    const user_id = req.params.user_id;
-    if (!user_id) {
-      statusCode = 400;
-      throw "user_id is required";
-    }
-    const userModel = req.app.locals.models.users;
-    const user = await userModel.findByCustomId(user_id);
-    if (!user) {
-      statusCode = 404;
-      throw "User not found";
-    }
-    //  Add summarized received requests
-    const requestRecievedIds = user.requests_recieved || [];
-    const requestRecievedSummaries = await Promise.all(
-      requestRecievedIds.map((id) =>
-        userModel
-          .findUserSummary(id)
-          .then((r) => r[0])
-          .catch(() => null)
-      )
-    );
-    return res
-      .status(200)
-      .json({ success: true, requests: requestRecievedSummaries });
+    const { user_id } = req.params;
+    if (!user_id) return sendError(res, 400, "user_id is required");
+
+    const usersM = req.app.locals.models.users;
+    const user = await usersM.findByCustomId(user_id);
+    if (!user) return sendError(res, 404, "User not found");
+
+    const ids = user.requests_recieved || [];
+    const requests = await usersM.getUsersByIds(ids);
+
+    return res.json({ success: true, requests });
   } catch (err) {
-    console.error(err);
-    return res
-      .status(statusCode === -1 ? 500 : statusCode)
-      .json({ success: false, error_msg: err });
+    console.error("getRequests error:", err);
+    return sendError(res, 500, "Server error");
   }
 };
+
+/* --------------------------------------------------------------------------
+ *  GET  /users/:user_id/friends
+ * ------------------------------------------------------------------------ */
 exports.getAllFriends = async (req, res) => {
   try {
-    let statusCode = -1;
-    const user_id = req.params.user_id;
-    if (!user_id) {
-      statusCode = 400;
-      throw "user_id is required";
-    }
-    const userModel = req.app.locals.models.users;
-    const friends = await userModel.getFriends(user_id);
-    if (friends === null) {
-      statusCode = 404;
-      throw "User not found";
-    }
-    return res.status(200).json({ friends: friends });
+    const { user_id } = req.params;
+    if (!user_id) return sendError(res, 400, "user_id is required");
+
+    const usersM = req.app.locals.models.users;
+    const friends = await usersM.getFriends(user_id);
+    if (friends === null) return sendError(res, 404, "User not found");
+
+    return res.json({ success: true, friends });
   } catch (err) {
-    console.error(err);
-    return res
-      .status(statusCode === -1 ? 500 : statusCode)
-      .json({ success: false, error_msg: err });
+    console.error("getAllFriends error:", err);
+    return sendError(res, 500, "Server error");
   }
 };
+
+/* --------------------------------------------------------------------------
+ *  POST /users/batch   { user_ids: [...] }
+ * ------------------------------------------------------------------------ */
 exports.getUsersByIds = async (req, res) => {
   try {
-    const userIds = req.body.user_ids;
-    if (!Array.isArray(userIds) || userIds.length === 0) {
-      return res
-        .status(400)
-        .json({ message: "user_ids must be a non-empty array" });
+    const ids = req.body.user_ids;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return sendError(res, 400, "user_ids must be a non-empty array");
     }
 
-    const users = await req.app.locals.models.users.getUsersByIds(userIds);
-    return res.status(200).json(users);
-  } catch (error) {
-    console.error("Error in getUsersByIds:", error);
-    return res.status(500).json({ message: "Server error" });
+    const users = await req.app.locals.models.users.getUsersByIds(ids);
+    return res.json(users);
+  } catch (err) {
+    console.error("getUsersByIds error:", err);
+    return sendError(res, 500, "Server error");
   }
 };

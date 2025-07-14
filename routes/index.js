@@ -11,9 +11,9 @@ const groupsRouter = require("./groups");
 const commentsRt = require("./comments");
 const likesRt = require("./likes");
 
-const u = require("../controllers/userController");
+// const u = require("../controllers/usersController");
 
-router.use("/user", userRouter);
+router.use("/users", userRouter);
 router.use("/auth", authRouter);
 router.use("/profile", profileRouter);
 router.use("/user/settings", settingsRouter);
@@ -22,6 +22,6 @@ router.use("/groups", groupsRouter);
 router.use("/", commentsRt);
 router.use("/", likesRt);
 
-//router.get("/user/:user_id", u.getUserById);
+// router.get("/user/:user_id", u.getUserById);
 
 module.exports = router;

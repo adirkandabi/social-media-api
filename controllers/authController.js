@@ -43,7 +43,7 @@ exports.login = async (req, res) => {
       return res.status(200).json({ success: true, user: user });
     } else {
       statusCode = 401;
-      throw "invalid email or password";
+      throw "invalid username or password";
     }
   } catch (err) {
     console.log(err);
