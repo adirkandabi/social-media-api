@@ -45,7 +45,10 @@ io.on("connection", (socket) => {
     const unread = await models.message.countUnread(receiver);
     io.to(receiver).emit("unread_count", unread);
   });
-
+  socket.on("refresh_unread", async (receiverId) => {
+    const unread = await models.message.countUnread(receiverId);
+    io.to(receiverId).emit("unread_count", unread);
+  });
   socket.on("mark_as_read", async ({ room, receiver }) => {
     await models.message.markAsRead(room, receiver);
   });

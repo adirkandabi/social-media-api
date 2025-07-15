@@ -58,21 +58,39 @@ class Posts extends BaseModel {
           },
         },
 
-        // Combine into author object
+        // Join with groups to get group name (if group_id exists)
+        {
+          $lookup: {
+            from: "groups",
+            localField: "group_id",
+            foreignField: "group_id",
+            as: "group_data",
+          },
+        },
+        {
+          $unwind: {
+            path: "$group_data",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+
+        // Combine author and group fields
         {
           $addFields: {
             author: {
               first_name: "$author_user.first_name",
               profile_image: "$author_profile.profile_image",
             },
+            group_name: "$group_data.name",
           },
         },
 
-        // Remove raw joined arrays
+        // Clean up raw arrays
         {
           $project: {
             author_user: 0,
             author_profile: 0,
+            group_data: 0,
           },
         },
       ])
@@ -92,8 +110,6 @@ class Posts extends BaseModel {
   async getPostsByUserId(author_id) {
     return this.collection.find({ author_id }).toArray();
   }
-
 }
-
 
 module.exports = Posts;

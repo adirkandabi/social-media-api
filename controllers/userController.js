@@ -1,9 +1,8 @@
-
 const sendError = (res, code, msg) =>
   res.status(code).json({ success: false, message: msg });
 
 /* --------------------------------------------------------------------------
- *  GET  /users/:user_id 
+ *  GET  /users/:user_id
  * ------------------------------------------------------------------------ */
 exports.getUserById = async (req, res) => {
   try {
@@ -24,7 +23,7 @@ exports.getUserById = async (req, res) => {
 };
 
 /* --------------------------------------------------------------------------
- *  GET  /users?id=xxxx 
+ *  GET  /users?id=xxxx
  * ------------------------------------------------------------------------ */
 exports.getUser = async (req, res) => {
   try {
@@ -34,7 +33,6 @@ exports.getUser = async (req, res) => {
     const userM = req.app.locals.models.users;
     const user = await userM.findByCustomId(user_id);
     if (!user) return sendError(res, 404, "User not found");
-
 
     user.name = user.username; // לבדוק מה אני מעדיף first_name + last_name
 
@@ -47,7 +45,7 @@ exports.getUser = async (req, res) => {
 };
 
 /* --------------------------------------------------------------------------
- *  GET  /users/list?q=term 
+ *  GET  /users/list?q=term
  * ------------------------------------------------------------------------ */
 exports.searchUsers = async (req, res) => {
   try {
@@ -65,21 +63,27 @@ exports.searchUsers = async (req, res) => {
   }
 };
 
-
 /* ==========================================================================
  *  SECTION: Friend-Request / Friends
  * ======================================================================== */
 
-exports.sendFriendRequest = async (req, res) => friendRequestWrapper(req, res, "send");
-exports.acceptFriendRequest = async (req, res) => friendRequestWrapper(req, res, "accept");
-exports.rejectFriendRequest = async (req, res) => friendRequestWrapper(req, res, "reject");
-exports.cancelFriendRequest = async (req, res) => friendRequestWrapper(req, res, "cancel");
-exports.deleteFriend = async (req, res) => friendRequestWrapper(req, res, "delete");
+exports.sendFriendRequest = async (req, res) =>
+  friendRequestWrapper(req, res, "send");
+exports.acceptFriendRequest = async (req, res) =>
+  friendRequestWrapper(req, res, "accept");
+exports.rejectFriendRequest = async (req, res) =>
+  friendRequestWrapper(req, res, "reject");
+exports.cancelFriendRequest = async (req, res) =>
+  friendRequestWrapper(req, res, "cancel");
+exports.deleteFriend = async (req, res) =>
+  friendRequestWrapper(req, res, "delete");
 
 async function friendRequestWrapper(req, res, action) {
   const { user_id, friend_id } = req.body;
-  if (!user_id || !friend_id) return sendError(res, 400, "Both user_id and friend_id are required");
-  if (user_id === friend_id) return sendError(res, 400, "Cannot perform this action on yourself");
+  if (!user_id || !friend_id)
+    return sendError(res, 400, "Both user_id and friend_id are required");
+  if (user_id === friend_id)
+    return sendError(res, 400, "Cannot perform this action on yourself");
 
   try {
     const usersM = req.app.locals.models.users;
@@ -87,13 +91,29 @@ async function friendRequestWrapper(req, res, action) {
     const friend = await usersM.findByCustomId(friend_id);
     if (!user || !friend) return sendError(res, 404, "User not found");
 
-    let ok = false, message = "";
+    let ok = false,
+      message = "";
     switch (action) {
-      case "send": ok = await usersM.sendFriendRequest(user_id, friend_id); message = "Friend request sent"; break;
-      case "accept": ok = await usersM.acceptFriendRequest(user_id, friend_id); message = "Friend request accepted"; break;
-      case "reject": ok = await usersM.rejectFriendRequest(user_id, friend_id); message = "Friend request rejected"; break;
-      case "cancel": ok = await usersM.cancelFriendRequest(user_id, friend_id); message = "Friend request cancelled"; break;
-      case "delete": ok = await usersM.deleteFriend(user_id, friend_id); message = "Friend deleted successfully"; break;
+      case "send":
+        ok = await usersM.sendFriendRequest(user_id, friend_id);
+        message = "Friend request sent";
+        break;
+      case "accept":
+        ok = await usersM.acceptFriendRequest(user_id, friend_id);
+        message = "Friend request accepted";
+        break;
+      case "reject":
+        ok = await usersM.rejectFriendRequest(user_id, friend_id);
+        message = "Friend request rejected";
+        break;
+      case "cancel":
+        ok = await usersM.cancelFriendRequest(user_id, friend_id);
+        message = "Friend request cancelled";
+        break;
+      case "delete":
+        ok = await usersM.deleteFriend(user_id, friend_id);
+        message = "Friend deleted successfully";
+        break;
     }
 
     if (!ok) return sendError(res, 500, "Operation failed");
@@ -105,7 +125,7 @@ async function friendRequestWrapper(req, res, action) {
 }
 
 /* --------------------------------------------------------------------------
- *  GET  /users/:user_id/requests  
+ *  GET  /users/:user_id/requests
  * ------------------------------------------------------------------------ */
 exports.getRequests = async (req, res) => {
   try {
@@ -127,7 +147,7 @@ exports.getRequests = async (req, res) => {
 };
 
 /* --------------------------------------------------------------------------
- *  GET  /users/:user_id/friends   
+ *  GET  /users/:user_id/friends
  * ------------------------------------------------------------------------ */
 exports.getAllFriends = async (req, res) => {
   try {
@@ -146,7 +166,7 @@ exports.getAllFriends = async (req, res) => {
 };
 
 /* --------------------------------------------------------------------------
- *  POST /users/batch   { user_ids: [...] } 
+ *  POST /users/batch   { user_ids: [...] }
  * ------------------------------------------------------------------------ */
 exports.getUsersByIds = async (req, res) => {
   try {

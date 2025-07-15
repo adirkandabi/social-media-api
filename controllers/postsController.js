@@ -47,31 +47,44 @@ exports.getPostById = async (req, res) => {
   }
 };
 
-// קבלת כל הפוסטים עם מחברים מתוך המודל
 exports.getAllPosts = async (req, res) => {
   const posts = req.app.locals.models.posts;
   const users = req.app.locals.models.users;
+  const groups = req.app.locals.models.groups;
 
   try {
     const filter = {};
 
-    if (req.query.group_id) {
+    const authorId = req.query.author_id;
+    const getFriendsPosts = req.query.get_friends_posts === "true";
+
+    if (!authorId) {
+      return res.status(400).json({ message: "Missing author_id" });
+    }
+
+    const user = await users.findByCustomId(authorId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Get user's group memberships
+    const memberGroups = await groups.collection
+      .find({ members: authorId }, { projection: { group_id: 1 } })
+      .toArray();
+
+    const groupIds = memberGroups.map((g) => g.group_id);
+
+    if (getFriendsPosts) {
+      // Include posts from user, friends, and their groups
+      filter.$or = [
+        { author_id: { $in: [authorId, ...(user.friends || [])] } },
+        { group_id: { $in: groupIds } },
+      ];
+    } else if (req.query.group_id) {
       filter.group_id = req.query.group_id;
-    }
-
-    if (req.query.author_id && req.query.get_friends_posts !== "true") {
-      filter.author_id = req.query.author_id;
-    }
-
-    if (req.query.author_id && req.query.get_friends_posts === "true") {
-      const user = await users.findByCustomId(req.query.author_id);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      filter.author_id = {
-        $in: [req.query.author_id, ...(user.friends || [])],
-      };
+    } else {
+      // Only user's own posts
+      filter.author_id = authorId;
     }
 
     const allPosts = await posts.list(filter);
