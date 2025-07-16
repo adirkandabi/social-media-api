@@ -33,7 +33,7 @@ exports.removeFriend = async (req, res) => {
         return res.status(404).json({ message: "User not found" });
 
     await users.removeFriend(user_id, friend_id);
-    await users.removeFriend(friend_id, user_id); // הסרה הדדית
+    await users.removeFriend(friend_id, user_id);
 
     res.json({ message: "Friend removed" });
 };

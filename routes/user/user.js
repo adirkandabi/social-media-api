@@ -2,12 +2,12 @@ const express = require("express");
 const router = express.Router();
 const userController = require("../../controllers/userController");
 
-router.get("/list", userController.searchUsers);                  // /users/list?q=...
-router.get("/:user_id/requests", userController.getRequests);    // /users/:user_id/requests
-router.get("/:user_id/friends", userController.getAllFriends);   // /users/:user_id/friends
+router.get("/list", userController.searchUsers);
+router.get("/:user_id/requests", userController.getRequests);
+router.get("/:user_id/friends", userController.getAllFriends);
 
-router.get("/", userController.getUser);                         // /users?id=...
-router.get("/:user_id", userController.getUserById);             // /users/:user_id
+router.get("/", userController.getUser);
+router.get("/:user_id", userController.getUserById);
 
 router.post("/send-friend-request", userController.sendFriendRequest);
 router.post("/accept-friend-request", userController.acceptFriendRequest);

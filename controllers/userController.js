@@ -1,9 +1,7 @@
 const sendError = (res, code, msg) =>
   res.status(code).json({ success: false, message: msg });
 
-/* --------------------------------------------------------------------------
- *  GET  /users/:user_id
- * ------------------------------------------------------------------------ */
+
 exports.getUserById = async (req, res) => {
   try {
     const { user_id } = req.params;
@@ -22,9 +20,7 @@ exports.getUserById = async (req, res) => {
   }
 };
 
-/* --------------------------------------------------------------------------
- *  GET  /users?id=xxxx
- * ------------------------------------------------------------------------ */
+
 exports.getUser = async (req, res) => {
   try {
     const user_id = req.query.id;
@@ -34,7 +30,7 @@ exports.getUser = async (req, res) => {
     const user = await userM.findByCustomId(user_id);
     if (!user) return sendError(res, 404, "User not found");
 
-    user.name = user.username; // לבדוק מה אני מעדיף first_name + last_name
+    user.name = user.username;
 
     delete user.password;
     return res.json(user);
@@ -44,9 +40,6 @@ exports.getUser = async (req, res) => {
   }
 };
 
-/* --------------------------------------------------------------------------
- *  GET  /users/list?q=term
- * ------------------------------------------------------------------------ */
 exports.searchUsers = async (req, res) => {
   try {
     const q = req.query.q;
@@ -63,9 +56,7 @@ exports.searchUsers = async (req, res) => {
   }
 };
 
-/* ==========================================================================
- *  SECTION: Friend-Request / Friends
- * ======================================================================== */
+
 
 exports.sendFriendRequest = async (req, res) =>
   friendRequestWrapper(req, res, "send");
@@ -124,9 +115,7 @@ async function friendRequestWrapper(req, res, action) {
   }
 }
 
-/* --------------------------------------------------------------------------
- *  GET  /users/:user_id/requests
- * ------------------------------------------------------------------------ */
+
 exports.getRequests = async (req, res) => {
   try {
     const { user_id } = req.params;
@@ -146,9 +135,7 @@ exports.getRequests = async (req, res) => {
   }
 };
 
-/* --------------------------------------------------------------------------
- *  GET  /users/:user_id/friends
- * ------------------------------------------------------------------------ */
+
 exports.getAllFriends = async (req, res) => {
   try {
     const { user_id } = req.params;
@@ -165,9 +152,7 @@ exports.getAllFriends = async (req, res) => {
   }
 };
 
-/* --------------------------------------------------------------------------
- *  POST /users/batch   { user_ids: [...] }
- * ------------------------------------------------------------------------ */
+
 exports.getUsersByIds = async (req, res) => {
   try {
     const ids = req.body.user_ids;

@@ -1,4 +1,4 @@
-// יצירת פוסט חדש
+// new post
 exports.createPost = async (req, res) => {
   const posts = req.app.locals.models.posts;
   const { author_id, content, group_id } = req.body;
@@ -8,7 +8,7 @@ exports.createPost = async (req, res) => {
   }
 
   const post = {
-    post_id: Date.now().toString(), // שימוש במקום UUID
+    post_id: Date.now().toString(),
     author_id,
     content,
     group_id: group_id || null,
@@ -31,7 +31,7 @@ exports.createPost = async (req, res) => {
   }
 };
 
-// קבלת פוסט לפי מזהה
+
 exports.getPostById = async (req, res) => {
   const posts = req.app.locals.models.posts;
   const { post_id } = req.params;
@@ -95,7 +95,7 @@ exports.getAllPosts = async (req, res) => {
   }
 };
 
-// עדכון פוסט
+// update post
 exports.updatePost = async (req, res) => {
   const posts = req.app.locals.models.posts;
   const { post_id } = req.params;
@@ -119,7 +119,7 @@ exports.updatePost = async (req, res) => {
   }
 };
 
-// מחיקת פוסט
+// delete post
 exports.deletePost = async (req, res) => {
   const posts = req.app.locals.models.posts;
   const { post_id } = req.params;
@@ -135,7 +135,7 @@ exports.deletePost = async (req, res) => {
   }
 };
 
-// חיפוש פוסטים לפי פרמטרים
+// search by parameters
 exports.searchPosts = async (req, res) => {
   const posts = req.app.locals.models.posts;
 
@@ -147,7 +147,7 @@ exports.searchPosts = async (req, res) => {
   }
 };
 
-// סינון פוסטים לפי מזהה קבוצה
+// filter posts by group_id
 exports.getPostsByGroup = async (req, res) => {
   const posts = req.app.locals.models.posts;
   const { group_id } = req.query;
